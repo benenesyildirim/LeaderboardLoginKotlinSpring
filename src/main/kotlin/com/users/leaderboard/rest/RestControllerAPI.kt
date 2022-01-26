@@ -1,18 +1,28 @@
 package com.users.leaderboard.rest
 
-import com.users.leaderboard.common.Constants
+import com.users.leaderboard.common.Constants.CHECK_NICKNAME
+import com.users.leaderboard.common.Constants.CREATE_USER
+import com.users.leaderboard.common.Constants.DELETE_USER
+import com.users.leaderboard.common.Constants.EMPTY_STRING
+import com.users.leaderboard.common.Constants.GET_ALL
+import com.users.leaderboard.common.Constants.GET_LEADERBOARD
+import com.users.leaderboard.common.Constants.GET_USER
+import com.users.leaderboard.common.Constants.INCORRECT_USER
+import com.users.leaderboard.common.Constants.MESSAGE
+import com.users.leaderboard.common.Constants.NO_USERS
 import com.users.leaderboard.common.Constants.ROLE_ADMIN
 import com.users.leaderboard.common.Constants.ROLE_USER
+import com.users.leaderboard.common.Constants.SUCCESS
+import com.users.leaderboard.common.Constants.UPDATE_USER
+import com.users.leaderboard.common.Constants.USER_ALREADY_USING
+import com.users.leaderboard.common.Constants.USER_CANT_FIND
+import com.users.leaderboard.common.Constants.U_R_NOT_ADMIN
 import com.users.leaderboard.firebase.FirebaseService
 import com.users.leaderboard.model.RequestAuth
 import com.users.leaderboard.model.UserDto
 import com.users.leaderboard.security.MyUserDetailService
 import com.users.leaderboard.security.jwt.JwtUtil
-import org.apache.juli.logging.Log
-import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.http.HttpHeaders
-import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.security.authentication.AuthenticationManager
 import org.springframework.security.authentication.BadCredentialsException
@@ -34,9 +44,9 @@ class RestControllerAPI(val firebaseService: FirebaseService) {
     @Autowired
     private lateinit var userDetailService: MyUserDetailService
 
-    @GetMapping("check-nickname")
+    @GetMapping(CHECK_NICKNAME)
     fun isNickNameUsable(nickName: String, uniqueId: String?, role: String?): ResponseEntity<String> {
-        val auth = RequestAuth(nickName, uniqueId ?: "")
+        val auth = RequestAuth(nickName, uniqueId ?: EMPTY_STRING)
 
         return if (firebaseService.isNickNameUsable(nickName)) {
             val newUser = UserDto(nickName = auth.username)
@@ -44,40 +54,40 @@ class RestControllerAPI(val firebaseService: FirebaseService) {
             FirebaseService().createUser(newUser)
             ResponseEntity.ok(createToken(auth, role ?: ROLE_USER))
         } else {
-            ResponseEntity.badRequest().body("Please try again, nickname already using in database.")
+            ResponseEntity.badRequest().body(USER_ALREADY_USING)
         }
     }
 
     @Throws(InterruptedException::class, ExecutionException::class)
-    @GetMapping("/get-user")
+    @GetMapping(GET_USER)
     fun getUser(@RequestParam username: String): ResponseEntity<UserDto> {
         return if (firebaseService.getUser(username) != null)
             ResponseEntity.ok()
-                .header("message", "success")
+                .header(MESSAGE, SUCCESS)
                 .body(firebaseService.getUser(username))
         else
-            ResponseEntity.badRequest().header("message", "User can not found").body(null)
+            ResponseEntity.badRequest().header(MESSAGE, USER_CANT_FIND).body(null)
     }
 
     @Throws(InterruptedException::class, ExecutionException::class)
-    @GetMapping("/get-all")
-    fun getAllUsers(@RequestParam token: String): ResponseEntity<MutableList<UserDto>> {
+    @GetMapping(GET_ALL)
+    fun getAllUsers(): ResponseEntity<MutableList<UserDto>> {
         return if (jwtUtil.getRole() == ROLE_ADMIN) {
             ResponseEntity.ok()
-                .header("message", "success")
-                .body(firebaseService.getAllUsers(token, true))
+                .header(MESSAGE, SUCCESS)
+                .body(firebaseService.getAllUsers(true))
         } else
-            ResponseEntity.badRequest().header("message", "You are not admin you can not get all users.").body(null)
+            ResponseEntity.badRequest().header(MESSAGE, U_R_NOT_ADMIN).body(null)
     }
 
     @Throws(InterruptedException::class, ExecutionException::class)
-    @GetMapping("/get-leaderboard")
-    fun getLeaderboard(@RequestParam token: String): ResponseEntity<MutableList<UserDto>> {
-        return if (firebaseService.getLeaderBoard(token).size > 0){
+    @GetMapping(GET_LEADERBOARD)
+    fun getLeaderboard(): ResponseEntity<MutableList<UserDto>> {
+        return if (firebaseService.getLeaderBoard().size > 0){
             ResponseEntity.ok()
-                .header("message", "success")
-                .body(firebaseService.getLeaderBoard(token))
-        }else ResponseEntity.badRequest().header("message", "There is no users.").body(null)
+                .header(MESSAGE, SUCCESS)
+                .body(firebaseService.getLeaderBoard())
+        }else ResponseEntity.badRequest().header(MESSAGE, NO_USERS).body(null)
     }
 
     fun createToken(authRequest: RequestAuth, role: String = ROLE_USER): String {
@@ -89,7 +99,7 @@ class RestControllerAPI(val firebaseService: FirebaseService) {
                 )
             )
         } catch (exception: BadCredentialsException) {
-            return "Incorrect username or password"
+            return INCORRECT_USER
         }
 
         userDetails = userDetailService.loadUserByUsername(authRequest.username)
@@ -101,27 +111,20 @@ class RestControllerAPI(val firebaseService: FirebaseService) {
 
     // Firebase C.R.U.D.
     @Throws(InterruptedException::class, ExecutionException::class)
-    @PostMapping("/create-user")
+    @PostMapping(CREATE_USER)
     fun createUser(@RequestBody user: UserDto): String {
         return firebaseService.createUser(user)
     }
 
     @Throws(InterruptedException::class, ExecutionException::class)
-    @PutMapping("/update-user")
+    @PutMapping(UPDATE_USER)
     fun updateUser(@RequestBody user: UserDto): String {
         return firebaseService.updateUser(user)
     }
 
     @Throws(InterruptedException::class, ExecutionException::class)
-    @PutMapping("/delete-user")
+    @PutMapping(DELETE_USER)
     fun deleteUser(@RequestParam username: String): String {
         return firebaseService.deleteUser(username)
-    }
-
-    @GetMapping("/mobiltest")
-    fun testMobil(): String{
-        LoggerFactory.getLogger(this.javaClass).info("AAAAAAAAAAAAAAAAAAAAAA")
-        return "Oleey!"
-
     }
 }

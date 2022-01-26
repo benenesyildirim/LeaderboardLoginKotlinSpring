@@ -1,8 +1,15 @@
 package com.users.leaderboard.firebase
 
-import com.google.cloud.firestore.*
+import com.google.cloud.firestore.DocumentReference
+import com.google.cloud.firestore.Firestore
+import com.google.cloud.firestore.QueryDocumentSnapshot
 import com.google.firebase.cloud.FirestoreClient
-import com.users.leaderboard.common.Constants.ADMIN_TOKEN
+import com.users.leaderboard.common.Constants.EMPTY_STRING
+import com.users.leaderboard.common.Constants.NICKNAME
+import com.users.leaderboard.common.Constants.POINT
+import com.users.leaderboard.common.Constants.TOKEN
+import com.users.leaderboard.common.Constants.UNIQUEID
+import com.users.leaderboard.common.Constants.USER_COLLECTION
 import com.users.leaderboard.model.UserDto
 import org.springframework.stereotype.Service
 import java.util.*
@@ -14,58 +21,52 @@ class FirebaseService {
 
     fun createUser(user: UserDto): String {
         user.uniqueId = createUniqueId()
-        val collection = fireStore.collection("users").document(user.nickName).set(user)
-        return if (collection.get().updateTime.toString().isNotEmpty())
+        val userDocument = fireStore.collection(USER_COLLECTION).document(user.nickName).set(user)
+        return if (userDocument.get().updateTime.toString().isNotEmpty())
             "OK"
         else
             "Problem"
     }
 
     fun updateUser(user: UserDto): String {
-        users = getAllUsers(ADMIN_TOKEN,true)
-
-        for (tempUser in users){
-            if (tempUser.nickName == user.nickName){
-                user.token = tempUser.token
-            }
-        }
+        users = getAllUsers(true)
 
         user.uniqueId = getUniqueId(user.nickName,users)
-        val collection = fireStore.collection("users").document(user.nickName).set(user)
-        return collection.get().updateTime.toString()
+        val userDocument = fireStore.collection(USER_COLLECTION).document(user.nickName).set(user)
+        return userDocument.get().updateTime.toString()
     }
 
     fun deleteUser(username: String): String {
-        fireStore.collection("users").document(username).delete()
+        fireStore.collection(USER_COLLECTION).document(username).delete()
         return "$username deleted."
     }
 
     fun getUser(username: String): UserDto? {
-        val documentReference: DocumentReference = fireStore.collection("users").document(username)
-        val future = documentReference.get()
-        val document = future.get()
+        val userDocumentReference: DocumentReference = fireStore.collection(USER_COLLECTION).document(username)
+        val userDocument = userDocumentReference.get()
+        val document = userDocument.get()
         if (document.exists()) {
             return UserDto(
-                document.get("nickName").toString(),
-                Integer.valueOf(document.get("point").toString())
+                document.get(NICKNAME).toString(),
+                Integer.valueOf(document.get(POINT).toString())
             )
         }
         return null
     }
 
-    fun getLeaderBoard(token: String): MutableList<UserDto> {
-        users = getAllUsers(ADMIN_TOKEN,true)
+    fun getLeaderBoard(): MutableList<UserDto> {
+        users = getAllUsers(false)
         val leaderBoardList = mutableListOf<UserDto>()
         for (user in users){
-            user.uniqueId = ""
+            user.uniqueId = EMPTY_STRING
             leaderBoardList.add(user)
         }
         leaderBoardList.sortByDescending { it.point }
-        return users
+        return leaderBoardList
     }
 
-    fun getAllUsers(token: String, isAdmin: Boolean): MutableList<UserDto> {
-        val documents = fireStore.collection("users").get().get().documents
+    fun getAllUsers(isAdmin: Boolean): MutableList<UserDto> {
+        val documents = fireStore.collection(USER_COLLECTION).get().get().documents
         val users = mutableListOf<UserDto>()
         for (i in documents) {
             users.add(toUser(i, isAdmin))
@@ -76,26 +77,26 @@ class FirebaseService {
     fun toUser(query: QueryDocumentSnapshot, isAdmin: Boolean): UserDto {
         return if (isAdmin)
             UserDto(
-                query.data["nickName"].toString(),
-                Integer.parseInt(query.data["point"].toString()),
-                query.data["uniqueId"].toString(),
-                query.data["token"].toString()
+                query.data[NICKNAME].toString(),
+                Integer.parseInt(query.data[POINT].toString()),
+                query.data[UNIQUEID].toString(),
+                query.data[TOKEN].toString()
             )
         else UserDto(
-            query.data["nickName"].toString(),
-            Integer.parseInt(query.data["point"].toString())
+            query.data[NICKNAME].toString(),
+            Integer.parseInt(query.data[POINT].toString())
         )
     }
 
     private fun createUniqueId(): String{
-        users = getAllUsers(ADMIN_TOKEN,true)
-        var random = UUID.randomUUID().toString()
+        users = getAllUsers(true)
+        var randomUniqueId = UUID.randomUUID().toString()
         for (user in users){
-            if (user.uniqueId == random){
-                random = UUID.randomUUID().toString()
+            if (user.uniqueId == randomUniqueId){
+                randomUniqueId = UUID.randomUUID().toString()
             }
         }
-        return random
+        return randomUniqueId
     }
 
     fun getUniqueId(nickName: String, users: MutableList<UserDto>): String{
@@ -106,7 +107,8 @@ class FirebaseService {
     }
 
     fun isNickNameUsable(nickName: String): Boolean{
-        users = getAllUsers(ADMIN_TOKEN,true)
+        users = getAllUsers(true)
+
         for (user in users){
             if (user.nickName == nickName){
                 return false

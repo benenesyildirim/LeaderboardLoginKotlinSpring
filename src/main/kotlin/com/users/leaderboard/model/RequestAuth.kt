@@ -1,7 +1,6 @@
 package com.users.leaderboard.model
 
 data class RequestAuth(
-    // TODO sonradan val yapabiliriz.
-    var username: String,
-    var uniqueId: String
+    val username: String,
+    val uniqueId: String
 )

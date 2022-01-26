@@ -1,5 +1,7 @@
 package com.users.leaderboard.security.jwt
 
+import com.users.leaderboard.common.Constants.ADMINISTRATION
+import com.users.leaderboard.common.Constants.BEARER
 import com.users.leaderboard.security.MyUserDetailService
 import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
@@ -26,10 +28,10 @@ class JwtFilter: OncePerRequestFilter() {
         response: HttpServletResponse,
         filterChain: FilterChain
     ) {
-        val authHeader = request.getHeader("Authorization")
+        val authHeader = request.getHeader(ADMINISTRATION)
         var username: String? = null
         var jwt: String? = null
-        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+        if (authHeader != null && authHeader.startsWith(BEARER)) {
             jwt = authHeader.substring(7)
             username = jwtUtil.extractUsername(jwt)
         }

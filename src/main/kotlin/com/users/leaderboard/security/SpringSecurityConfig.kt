@@ -1,7 +1,7 @@
 package com.users.leaderboard.security
 
+import com.users.leaderboard.common.Constants.CHECK_NICKNAME
 import com.users.leaderboard.security.jwt.JwtFilter
-import com.users.leaderboard.security.jwt.JwtUtil
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.annotation.Bean
 import org.springframework.security.authentication.AuthenticationManager
@@ -14,7 +14,6 @@ import org.springframework.security.config.http.SessionCreationPolicy
 import org.springframework.security.crypto.password.NoOpPasswordEncoder
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter
-import kotlin.jvm.Throws
 
 @EnableWebSecurity
 class SpringSecurityConfig : WebSecurityConfigurerAdapter() {
@@ -43,7 +42,7 @@ class SpringSecurityConfig : WebSecurityConfigurerAdapter() {
     @Throws
     override fun configure(http: HttpSecurity?) {
         http!!.csrf().disable()
-            .authorizeRequests().antMatchers("/check-nickname","/mobiltest").permitAll()
+            .authorizeRequests().antMatchers(CHECK_NICKNAME).permitAll()
             .anyRequest().authenticated()
             .and().sessionManagement()
             .sessionCreationPolicy(SessionCreationPolicy.STATELESS)

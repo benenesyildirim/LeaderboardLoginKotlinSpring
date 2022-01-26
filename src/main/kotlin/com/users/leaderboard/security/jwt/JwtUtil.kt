@@ -1,6 +1,7 @@
 package com.users.leaderboard.security.jwt
 
 import com.users.leaderboard.common.Constants.KEY_SECRET
+import com.users.leaderboard.common.Constants.ROLE
 import com.users.leaderboard.common.Constants.ROLE_USER
 import io.jsonwebtoken.Claims
 import io.jsonwebtoken.Jwts
@@ -12,7 +13,6 @@ import java.util.*
 import java.util.function.Function
 import javax.crypto.spec.SecretKeySpec
 import javax.xml.bind.DatatypeConverter
-
 
 @Service
 class JwtUtil {
@@ -30,7 +30,7 @@ class JwtUtil {
     }
 
     fun getRoleFromToken(token: String?): String {
-        return Jwts.parser().setSigningKey(KEY_SECRET).parseClaimsJws(token).body["role"].toString()
+        return Jwts.parser().setSigningKey(KEY_SECRET).parseClaimsJws(token).body[ROLE].toString()
     }
 
     fun getRole(): String{
@@ -47,7 +47,7 @@ class JwtUtil {
         return Jwts.parser().setSigningKey(KEY_SECRET).parseClaimsJws(token).body
     }
 
-    private fun isTokenExpired(token: String?): Boolean? {
+    private fun isTokenExpired(token: String?): Boolean {
         return extractExpiration(token).before(Date())
     }
 
@@ -61,7 +61,7 @@ class JwtUtil {
         val signingKey: Key = SecretKeySpec(apiKeySecretBytes, signatureAlgorithm.jcaName)
 
         return Jwts.builder().setClaims(claims)
-            .claim("role", role)
+            .claim(ROLE, role)
             .setSubject(user.username)
             .setId(user.password)
             .setIssuedAt(Date(System.currentTimeMillis())) // tokenStartedDate
@@ -74,7 +74,7 @@ class JwtUtil {
     fun validateToken(token: String?, userDetails: UserDetails): Boolean? {
         val username = extractUsername(token)
 
-        return if (username == userDetails.username && !isTokenExpired(token)!!) {
+        return if (username == userDetails.username && !isTokenExpired(token)) {
             userRole = getRoleFromToken(token)
             true
         } else {
