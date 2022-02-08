@@ -20,7 +20,7 @@ import com.users.leaderboard.common.Constants.U_R_NOT_ADMIN
 import com.users.leaderboard.firebase.FirebaseService
 import com.users.leaderboard.model.RequestAuth
 import com.users.leaderboard.model.UserDto
-import com.users.leaderboard.security.MyUserDetailService
+import com.users.leaderboard.security.UserService
 import com.users.leaderboard.security.jwt.JwtUtil
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.ResponseEntity
@@ -42,16 +42,14 @@ class RestControllerAPI(val firebaseService: FirebaseService) {
     private lateinit var authenticationManager: AuthenticationManager
 
     @Autowired
-    private lateinit var userDetailService: MyUserDetailService
+    private lateinit var userService: UserService
 
     @GetMapping(CHECK_NICKNAME)
     fun isNickNameUsable(nickName: String, uniqueId: String?, role: String?): ResponseEntity<String> {
         val auth = RequestAuth(nickName, uniqueId ?: EMPTY_STRING)
 
         return if (firebaseService.isNickNameUsable(nickName)) {
-            val newUser = UserDto(nickName = auth.username)
-            userDetailService.addToUsers(newUser)
-            FirebaseService().createUser(newUser)
+            userService.addToUsers(UserDto(nickName = auth.username))
             ResponseEntity.ok(createToken(auth, role ?: ROLE_USER))
         } else {
             ResponseEntity.badRequest().body(USER_ALREADY_USING)
@@ -61,10 +59,11 @@ class RestControllerAPI(val firebaseService: FirebaseService) {
     @Throws(InterruptedException::class, ExecutionException::class)
     @GetMapping(GET_USER)
     fun getUser(@RequestParam username: String): ResponseEntity<UserDto> {
-        return if (firebaseService.getUser(username) != null)
+        val user = firebaseService.getUser(username)
+        return if (user != null)
             ResponseEntity.ok()
                 .header(MESSAGE, SUCCESS)
-                .body(firebaseService.getUser(username))
+                .body(user)
         else
             ResponseEntity.badRequest().header(MESSAGE, USER_CANT_FIND).body(null)
     }
@@ -102,7 +101,8 @@ class RestControllerAPI(val firebaseService: FirebaseService) {
             return INCORRECT_USER
         }
 
-        userDetails = userDetailService.loadUserByUsername(authRequest.username)
+        userDetails = userService.getUserByUsername(authRequest.username)
+        FirebaseService().createUser(UserDto(nickName = authRequest.username))
         val token = jwtUtil.generateToken(userDetails, role)!!
 
         firebaseService.setTokenToUser(token, UserDto(authRequest.username))

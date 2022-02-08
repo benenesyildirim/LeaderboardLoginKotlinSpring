@@ -4,7 +4,6 @@ import com.google.cloud.firestore.DocumentReference
 import com.google.cloud.firestore.Firestore
 import com.google.cloud.firestore.QueryDocumentSnapshot
 import com.google.firebase.cloud.FirestoreClient
-import com.users.leaderboard.common.Constants.EMPTY_STRING
 import com.users.leaderboard.common.Constants.NICKNAME
 import com.users.leaderboard.common.Constants.POINT
 import com.users.leaderboard.common.Constants.TOKEN
@@ -44,23 +43,18 @@ class FirebaseService {
     fun getUser(username: String): UserDto? {
         val userDocumentReference: DocumentReference = fireStore.collection(USER_COLLECTION).document(username)
         val userDocument = userDocumentReference.get()
-        val document = userDocument.get()
-        if (document.exists()) {
+        val user = userDocument.get()
+        if (user.exists()) {
             return UserDto(
-                document.get(NICKNAME).toString(),
-                Integer.valueOf(document.get(POINT).toString())
+                user.get(NICKNAME).toString(),
+                Integer.valueOf(user.get(POINT).toString())
             )
         }
         return null
     }
 
     fun getLeaderBoard(): MutableList<UserDto> {
-        users = getAllUsers(false)
-        val leaderBoardList = mutableListOf<UserDto>()
-        for (user in users){
-            user.uniqueId = EMPTY_STRING
-            leaderBoardList.add(user)
-        }
+        val leaderBoardList = getAllUsers(false)
         leaderBoardList.sortByDescending { it.point }
         return leaderBoardList
     }
